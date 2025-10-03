@@ -5,7 +5,7 @@ export default function SalesList({ token }) {
   const [sales, setSales] = useState([]);
 
   useEffect(() => {
-    axios.get(`${process.env.REACT_APP_API_URL}/sales`, {
+    axios.get(`${process.env.REACT_APP_API_BASE_URL}/sales`, {
       headers: { Authorization: `Bearer ${token}` }
     }).then(res => setSales(res.data));
   }, [token]);

@@ -16,7 +16,7 @@ const AddInvoiceDialog = ({ onClose }) => {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    axios.post(`${process.env.REACT_APP_API_URL}/invoices/outgoing`, form, {
+    axios.post(`${process.env.REACT_APP_API_BASE_URL}/invoices/outgoing`, form, {
       headers: { Authorization: 'Bearer ' + token }
     }).then(() => onClose())
       .catch((error) => {

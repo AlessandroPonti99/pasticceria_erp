@@ -6,7 +6,7 @@ export default function SalesForm({ token }) {
   const [items, setItems] = useState([]);
 
   useEffect(() => {
-    axios.get(`${process.env.REACT_APP_API_URL}/inventory`, {
+    axios.get(`${process.env.REACT_APP_API_BASE_URL}/inventory`, {
       headers: { Authorization: `Bearer ${token}` }
     }).then(res => setProducts(res.data));
   }, [token]);
@@ -16,7 +16,7 @@ export default function SalesForm({ token }) {
   };
 
   const submitSale = () => {
-    axios.post(`${process.env.REACT_APP_API_URL}/sales`, { items }, {
+    axios.post(`${process.env.REACT_APP_API_BASE_URL}/sales`, { items }, {
       headers: { Authorization: `Bearer ${token}` }
     }).then(() => {
       alert('Vendita registrata!');

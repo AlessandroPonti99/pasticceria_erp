@@ -7,12 +7,12 @@ export default function TransactionList({ token }) {
   const [filters, setFilters] = useState({ from: '', to: '', category: '' });
 
   const loadData = () => {
-    axios.get(`${process.env.REACT_APP_API_URL}/transactions`, {
+    axios.get(`${process.env.REACT_APP_API_BASE_URL}/transactions`, {
       headers: { Authorization: `Bearer ${token}` },
       params: filters
     }).then(res => setTransactions(res.data));
 
-    axios.get(`${process.env.REACT_APP_API_URL}/transactions/balance`, {
+    axios.get(`${process.env.REACT_APP_API_BASE_URL}/transactions/balance`, {
       headers: { Authorization: `Bearer ${token}` }
     }).then(res => setBalance(res.data.balance));
   };

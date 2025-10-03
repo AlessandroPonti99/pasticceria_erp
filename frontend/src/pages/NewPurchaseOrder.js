@@ -8,9 +8,9 @@ export default function NewPurchaseOrder({ token }) {
   const [items, setItems] = useState([]);
 
   useEffect(() => {
-    axios.get(`${process.env.REACT_APP_API_URL}/suppliers`, { headers: { Authorization: `Bearer ${token}` } })
+    axios.get(`${process.env.REACT_APP_API_BASE_URL}/suppliers`, { headers: { Authorization: `Bearer ${token}` } })
       .then(res => setSuppliers(res.data));
-    axios.get(`${process.env.REACT_APP_API_URL}/inventory`, { headers: { Authorization: `Bearer ${token}` } })
+    axios.get(`${process.env.REACT_APP_API_BASE_URL}/inventory`, { headers: { Authorization: `Bearer ${token}` } })
       .then(res => setProducts(res.data));
   }, [token]);
 
@@ -20,7 +20,7 @@ export default function NewPurchaseOrder({ token }) {
   };
 
   const sendOrder = () => {
-    axios.post(`${process.env.REACT_APP_API_URL}/purchases/orders`, {
+    axios.post(`${process.env.REACT_APP_API_BASE_URL}/purchases/orders`, {
       supplier_id: supplierId,
       items
     }, { headers: { Authorization: `Bearer ${token}` } }).then(() => alert('Ordine inviato'));

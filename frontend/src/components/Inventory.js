@@ -14,7 +14,7 @@ const Inventory = () => {
       return;
     }
 
-    axios.get(`${process.env.REACT_APP_API_URL}/inventory/stock`, {
+    axios.get(`${process.env.REACT_APP_API_BASE_URL}/inventory/stock`, {
       headers: { Authorization: 'Bearer ' + token }
     })
     .then(res => setInventory(res.data))

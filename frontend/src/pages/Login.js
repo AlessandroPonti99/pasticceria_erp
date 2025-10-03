@@ -10,7 +10,7 @@ const Login = () => {
   const handleSubmit = (e) => {
     e.preventDefault();
 
-    axios.post(`${process.env.REACT_APP_API_URL}/auth/login`, form)
+    axios.post(`${process.env.REACT_APP_API_BASE_URL}/auth/login`, form)
       .then(res => {
         localStorage.setItem('token', res.data.token);
         navigate('/dashboard');

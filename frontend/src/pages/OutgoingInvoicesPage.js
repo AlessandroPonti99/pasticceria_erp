@@ -47,7 +47,7 @@ const OutgoingInvoicesPage = () => {
 };
 
   const fetchInvoices = () => {
-    axios.get(`${process.env.REACT_APP_API_URL}/invoices/outgoing`, {
+    axios.get(`${process.env.REACT_APP_API_BASE_URL}/invoices/outgoing`, {
       headers: { Authorization: 'Bearer ' + token }
     })
     .then(res => setInvoices(res.data))
@@ -62,7 +62,7 @@ const OutgoingInvoicesPage = () => {
   }, []);
 
   const handleEmit = (id) => {
-    axios.put(`${process.env.REACT_APP_API_URL}/invoices/outgoing/${id}/emit`, {}, {
+    axios.put(`${process.env.REACT_APP_API_BASE_URL}/invoices/outgoing/${id}/emit`, {}, {
       headers: { Authorization: 'Bearer ' + token }
     }).then(fetchInvoices)
       .catch(() => alert('Errore durante emissione'));
