@@ -40,7 +40,6 @@ app.use('/employees', employeesRoutes);
 app.use('/suppliers', supplierRoutes);
 app.use('/purchases', purchaseRoutes);
 app.use('/invoices', invoiceRoutes);
-app.use('/', authRoutes);
 
 // Start server
 const PORT = process.env.PORT || 3001;
