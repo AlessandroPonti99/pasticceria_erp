@@ -13,7 +13,7 @@ router.post('/login', (req, res) => {
       if (err) return res.status(500).send('Errore server');
 
       if (results.length === 0) {
-        return res.status(401).send('Credenziali errate');
+        return res.status(401).send('Credenziali errate in auth.js');
       }
 
       const user = results[0];
@@ -30,4 +30,3 @@ router.post('/login', (req, res) => {
 });
 
 module.exports = router;
-
