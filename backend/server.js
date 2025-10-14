@@ -19,6 +19,34 @@ app.use(cors());
 app.use(express.json());
 app.use(bodyParser.json());
 
+//test
+// Route di test********************************
+app.get('/', (req, res) => {
+  res.json({ 
+    message: 'Backend is working!',
+    timestamp: new Date().toISOString(),
+    routes: [
+      '/auth/login',
+      '/auth/debug-users',
+      '/inventory',
+      '/sales'
+    ]
+  });
+});
+
+app.get('/auth/test', (req, res) => {
+  res.json({ message: 'Auth routes are working!' });
+});
+
+app.post('/auth/test-login', (req, res) => {
+  console.log('Test login body:', req.body);
+  res.json({ 
+    message: 'Test login received',
+    receivedData: req.body 
+  });
+});
+//fine route di test **********************************
+
 // DB Connection
 const db = mysql.createConnection({
   host: process.env.DB_HOST,

@@ -4,6 +4,7 @@ const router = express.Router();
 
 // Rotta di login
 router.post('/login', (req, res) => {
+  console.log('Login route called');
   const { username, password } = req.body;
 
   global.db.query(
