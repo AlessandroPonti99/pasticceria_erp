@@ -13,6 +13,7 @@ const employeesRoutes = require('./routes/employees');
 const supplierRoutes = require('./routes/suppliers');
 const purchaseRoutes = require('./routes/purchases');
 const invoiceRoutes = require('./routes/invoices');
+const predictionRoutes = require('./routes/predictions');
 
 const app = express();
 app.use(cors());
@@ -67,6 +68,7 @@ app.use('/employees', employeesRoutes);
 app.use('/suppliers', supplierRoutes);
 app.use('/purchases', purchaseRoutes);
 app.use('/invoices', invoiceRoutes);
+app.use('/predictions', predictionRoutes);
 
 // Start server
 const PORT = process.env.PORT || 3001;
