@@ -9,11 +9,11 @@ function verifyToken(req, res, next) {
   if (!token) return res.sendStatus(401);
 
   try {
-    const decoded = jwt.verify(token, 'secret_key');
+    const decoded = jwt.verify(token, 'un_super_segreto_sicuro');
     req.user = decoded;
     next();
   } catch (err) {
-    return res.sendStatus(403);
+    return res.status(403).send('Token non valido');
   }
 }
 
@@ -51,7 +51,7 @@ router.post('/outgoing', verifyToken, (req, res) => {
 
 // PUT - emetti fattura
 router.put('/outgoing/:id/emit', verifyToken, (req, res) => {
-  if (req.user.role !== 'admin') return res.sendStatus(403);
+  if (req.user.role !== 'admin') return res.status(403).send('Token post non valido');
 
   db.query('UPDATE outgoing_invoices SET status = "Emessa" WHERE id = ?', [req.params.id], (err) => {
     if (err) return res.status(500).send('Errore aggiornamento');

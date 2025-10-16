@@ -47,15 +47,23 @@ const OutgoingInvoicesPage = () => {
 };
 
   const fetchInvoices = () => {
-    axios.get(`${process.env.REACT_APP_API_BASE_URL}/invoices/outgoing`, {
-      headers: { Authorization: 'Bearer ' + token }
-    })
-    .then(res => setInvoices(res.data))
-    .catch((error) => {
-        console.error('Errore fetch fatture:', error.response?.data || error.message);
-        alert('Errore nel caricamento delle fatture');
+  axios.get(`${process.env.REACT_APP_API_BASE_URL}/invoices/outgoing`, {
+    headers: { Authorization: 'Bearer ' + token }
+  })
+  .then(res => {
+    console.log('Fatture ricevute:', res.data);
+    setInvoices(res.data);
+  })
+  .catch((error) => {
+    console.error('Errore completo:', error);
+    console.error('Dettagli errore:', {
+      status: error.response?.status,
+      data: error.response?.data,
+      message: error.message
     });
-  };
+    alert('Errore nel caricamento delle fatture: ' + (error.response?.data?.error || error.message));
+  });
+};
 
   useEffect(() => {
     fetchInvoices();
