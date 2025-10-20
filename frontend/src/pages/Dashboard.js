@@ -77,6 +77,9 @@ const Dashboard = () => {
         return <SalesPredictionPage />;
       case 'analysis':
         return <DataAnalysisPage />;
+      case 'import':
+        return <DataImportPage />;
+
       /*case 'inventory':
         return <p>Modulo inventario (disattivato temporaneamente)</p>;
       case 'sales':
@@ -120,6 +123,12 @@ const Dashboard = () => {
             style={view === 'analysis' ? styles.activeButton : styles.navButton}
           >
             📊 Analisi Dati
+          </button>
+          <button 
+            onClick={() => setView('import')} 
+            style={view === 'import' ? styles.activeButton : styles.navButton}
+          >
+            📁 Importa Dati
           </button>
           {/*
           <button onClick={() => setView('inventory')}>📦 Inventario</button>
