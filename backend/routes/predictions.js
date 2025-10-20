@@ -519,4 +519,300 @@ router.get('/config-test', authenticateToken, async (req, res) => {
   }
 });
 
+// Analisi dati storici per miglioramento algoritmo
+router.get('/analyze/:year/:month', authenticateToken, (req, res) => {
+  const { year, month } = req.params;
+  
+  const analysisQueries = {
+    // Statistiche base
+    basicStats: `
+      SELECT 
+        COUNT(*) as total_days,
+        AVG(total_sales) as avg_sales,
+        MIN(total_sales) as min_sales,
+        MAX(total_sales) as max_sales,
+        SUM(total_sales) as total_revenue
+      FROM sales_history 
+      WHERE YEAR(date) = ? AND MONTH(date) = ?
+    `,
+    
+    // Analisi per giorno della settimana
+    dayAnalysis: `
+      SELECT 
+        DAYOFWEEK(date) as day_of_week,
+        COUNT(*) as days_count,
+        AVG(total_sales) as avg_sales,
+        AVG(temperature) as avg_temperature
+      FROM sales_history 
+      WHERE YEAR(date) = ? AND MONTH(date) = ?
+      GROUP BY DAYOFWEEK(date)
+      ORDER BY day_of_week
+    `,
+    
+    // Impatto meteo
+    weatherAnalysis: `
+      SELECT 
+        CASE 
+          WHEN temperature < 10 THEN 'Freddo (<10°C)'
+          WHEN temperature BETWEEN 10 AND 20 THEN 'Temperato (10-20°C)'
+          WHEN temperature > 20 THEN 'Caldo (>20°C)'
+          ELSE 'Non specificato'
+        END as temp_range,
+        COUNT(*) as days_count,
+        AVG(total_sales) as avg_sales
+      FROM sales_history 
+      WHERE YEAR(date) = ? AND MONTH(date) = ?
+      GROUP BY temp_range
+      ORDER BY avg_sales DESC
+    `,
+    
+    // Pattern festività
+    holidayAnalysis: `
+      SELECT 
+        is_holiday,
+        COUNT(*) as days_count,
+        AVG(total_sales) as avg_sales,
+        AVG(temperature) as avg_temperature
+      FROM sales_history 
+      WHERE YEAR(date) = ? AND MONTH(date) = ?
+      GROUP BY is_holiday
+    `,
+    
+    // Top prodotti per mese
+    productAnalysis: `
+      SELECT 
+        date,
+        products,
+        total_sales
+      FROM sales_history 
+      WHERE YEAR(date) = ? AND MONTH(date) = ?
+      ORDER BY date
+    `
+  };
+
+  // Esegui tutte le query in parallelo
+  Promise.all([
+    executeQuery(analysisQueries.basicStats, [year, month]),
+    executeQuery(analysisQueries.dayAnalysis, [year, month]),
+    executeQuery(analysisQueries.weatherAnalysis, [year, month]),
+    executeQuery(analysisQueries.holidayAnalysis, [year, month]),
+    executeQuery(analysisQueries.productAnalysis, [year, month])
+  ])
+  .then(([basicStats, dayAnalysis, weatherAnalysis, holidayAnalysis, productAnalysis]) => {
+    
+    // Analisi avanzata prodotti
+    const productTrends = analyzeProductTrends(productAnalysis);
+    
+    // Identifica pattern
+    const patterns = identifySalesPatterns(dayAnalysis, weatherAnalysis, holidayAnalysis);
+    
+    // Suggerimenti per algoritmo
+    const suggestions = generateAlgorithmSuggestions(basicStats, patterns, productTrends);
+    
+    res.json({
+      period: `${month}/${year}`,
+      basic_stats: basicStats[0],
+      day_analysis: dayAnalysis,
+      weather_analysis: weatherAnalysis,
+      holiday_analysis: holidayAnalysis,
+      product_trends: productTrends,
+      patterns: patterns,
+      algorithm_suggestions: suggestions,
+      data_quality: assessDataQuality(basicStats[0])
+    });
+  })
+  .catch(error => {
+    console.error('Analysis error:', error);
+    res.status(500).json({ error: 'Errore nell\'analisi dati' });
+  });
+});
+
+// Helper per eseguire query
+function executeQuery(query, params) {
+  return new Promise((resolve, reject) => {
+    db.query(query, params, (err, results) => {
+      if (err) reject(err);
+      else resolve(results);
+    });
+  });
+}
+
+// Analizza trend prodotti
+function analyzeProductTrends(productData) {
+  if (!productData || productData.length === 0) {
+    return { error: 'Nessun dato prodotto disponibile' };
+  }
+
+  const productTotals = {};
+  const productDays = {};
+  
+  productData.forEach(day => {
+    try {
+      const products = parseJSON(day.products);
+      Object.entries(products).forEach(([product, quantity]) => {
+        if (!productTotals[product]) {
+          productTotals[product] = 0;
+          productDays[product] = 0;
+        }
+        productTotals[product] += quantity;
+        productDays[product]++;
+      });
+    } catch (error) {
+      console.error('Error parsing products:', error);
+    }
+  });
+
+  // Calcola medie e rank
+  const productAverages = Object.keys(productTotals).map(product => ({
+    product,
+    total_sold: productTotals[product],
+    average_per_day: productTotals[product] / productDays[product],
+    days_available: productDays[product]
+  }));
+
+  // Ordina per vendite
+  productAverages.sort((a, b) => b.total_sold - a.total_sold);
+
+  return {
+    top_products: productAverages.slice(0, 10),
+    total_unique_products: productAverages.length,
+    most_consistent: productAverages
+      .filter(p => p.days_available > 15) // Disponibile più di 15 giorni
+      .sort((a, b) => b.average_per_day - a.average_per_day)
+      .slice(0, 5)
+  };
+}
+
+// Identifica pattern di vendita
+function identifySalesPatterns(dayAnalysis, weatherAnalysis, holidayAnalysis) {
+  const patterns = {
+    best_days: [],
+    weather_impact: [],
+    holiday_impact: null
+  };
+
+  // Pattern giorni della settimana
+  if (dayAnalysis && dayAnalysis.length > 0) {
+    const sortedDays = [...dayAnalysis].sort((a, b) => b.avg_sales - a.avg_sales);
+    patterns.best_days = sortedDays.map(day => ({
+      day_number: day.day_of_week,
+      day_name: getDayNameFromNumber(day.day_of_week),
+      average_sales: day.avg_sales,
+      temperature: day.avg_temperature
+    }));
+  }
+
+  // Pattern meteo
+  if (weatherAnalysis && weatherAnalysis.length > 0) {
+    patterns.weather_impact = weatherAnalysis.map(weather => ({
+      range: weather.temp_range,
+      average_sales: weather.avg_sales,
+      days_count: weather.days_count
+    }));
+  }
+
+  // Pattern festività
+  if (holidayAnalysis && holidayAnalysis.length > 0) {
+    const holidayData = holidayAnalysis.find(h => h.is_holiday);
+    const normalData = holidayAnalysis.find(h => !h.is_holiday);
+    
+    if (holidayData && normalData) {
+      patterns.holiday_impact = {
+        holiday_sales: holidayData.avg_sales,
+        normal_sales: normalData.avg_sales,
+        difference: holidayData.avg_sales - normalData.avg_sales,
+        multiplier: holidayData.avg_sales / normalData.avg_sales
+      };
+    }
+  }
+
+  return patterns;
+}
+
+// Genera suggerimenti per l'algoritmo
+function generateAlgorithmSuggestions(basicStats, patterns, productTrends) {
+  const suggestions = [];
+  const stats = basicStats[0] || {};
+
+  // Analizza variabilità vendite
+  const salesRange = stats.max_sales - stats.min_sales;
+  const variability = salesRange / stats.avg_sales;
+
+  if (variability > 0.5) {
+    suggestions.push({
+      type: 'VARIABILITY',
+      message: 'Alta variabilità nelle vendite giornaliere',
+      recommendation: 'Aumenta il peso dei fattori meteo e festività',
+      impact: 'ALTO'
+    });
+  }
+
+  // Analizza pattern giorni
+  if (patterns.best_days && patterns.best_days.length > 0) {
+    const bestDay = patterns.best_days[0];
+    const worstDay = patterns.best_days[patterns.best_days.length - 1];
+    const dayDifference = (bestDay.average_sales - worstDay.average_sales) / worstDay.average_sales;
+
+    if (dayDifference > 0.3) {
+      suggestions.push({
+        type: 'WEEKDAY_PATTERN',
+        message: `Forte differenza tra ${bestDay.day_name} (migliori) e ${worstDay.day_name} (peggiori)`,
+        recommendation: 'Aumenta il moltiplicatore per i giorni migliori',
+        impact: 'MEDIO'
+      });
+    }
+  }
+
+  // Analizza impatto festività
+  if (patterns.holiday_impact && patterns.holiday_impact.multiplier > 1.5) {
+    suggestions.push({
+      type: 'HOLIDAY_IMPACT',
+      message: `Le festività aumentano le vendite del ${Math.round((patterns.holiday_impact.multiplier - 1) * 100)}%`,
+      recommendation: 'Mantieni o aumenta i moltiplicatori festività',
+      impact: 'ALTO'
+    });
+  }
+
+  // Analizza prodotti
+  if (productTrends.top_products && productTrends.top_products.length > 0) {
+    const topProduct = productTrends.top_products[0];
+    suggestions.push({
+      type: 'PRODUCT_FOCUS',
+      message: `Prodotto top: ${topProduct.product} (${topProduct.average_per_day.toFixed(1)}/giorno)`,
+      recommendation: 'Considera questo prodotto nelle predizioni di picco',
+      impact: 'MEDIO'
+    });
+  }
+
+  return suggestions;
+}
+
+// Valuta qualità dati
+function assessDataQuality(stats) {
+  if (!stats || stats.total_days === 0) {
+    return { quality: 'INSUFFICIENT', message: 'Dati insufficienti per l\'analisi' };
+  }
+
+  const quality = {
+    total_days: stats.total_days,
+    coverage: (stats.total_days / 30) * 100, // Assumendo mese di 30 giorni
+    has_weather: stats.avg_temperature ? 'YES' : 'NO',
+    has_products: stats.avg_sales > 0 ? 'YES' : 'NO'
+  };
+
+  // Assegna rating qualità
+  if (quality.coverage >= 80) quality.rating = 'EXCELLENT';
+  else if (quality.coverage >= 60) quality.rating = 'GOOD';
+  else if (quality.coverage >= 40) quality.rating = 'FAIR';
+  else quality.rating = 'POOR';
+
+  return quality;
+}
+
+// Helper per nomi giorni
+function getDayNameFromNumber(dayNumber) {
+  const days = ['Domenica', 'Lunedì', 'Martedì', 'Mercoledì', 'Giovedì', 'Venerdì', 'Sabato'];
+  return days[(dayNumber - 1) % 7];
+}
+
 module.exports = router;

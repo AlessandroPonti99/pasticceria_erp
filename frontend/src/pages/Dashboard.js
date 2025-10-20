@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { jwtDecode } from 'jwt-decode';
 import { useNavigate } from 'react-router-dom';
 import OutgoingInvoicesPage from '../pages/OutgoingInvoicesPage';
-import SalesPredictionPage from '../pages/SalesPredictionPage'; // AGGIUNGI QUESTA IMPORT
+import SalesPredictionPage from '../pages/SalesPredictionPage';
+import DataAnalysisPage from '../pages/DataAnalysisPage';
 
 const Dashboard = () => {
   const [username, setUsername] = useState('');
@@ -74,6 +75,8 @@ const Dashboard = () => {
         return <OutgoingInvoicesPage />;
       case 'predictions': // AGGIUNGI QUESTO CASE
         return <SalesPredictionPage />;
+      case 'analysis':
+        return <DataAnalysisPage />;
       /*case 'inventory':
         return <p>Modulo inventario (disattivato temporaneamente)</p>;
       case 'sales':
@@ -111,6 +114,12 @@ const Dashboard = () => {
             style={view === 'invoices' ? styles.activeButton : styles.navButton}
           >
             📄 Fatture
+          </button>
+          <button 
+            onClick={() => setView('analysis')} 
+            style={view === 'analysis' ? styles.activeButton : styles.navButton}
+          >
+            📊 Analisi Dati
           </button>
           {/*
           <button onClick={() => setView('inventory')}>📦 Inventario</button>
