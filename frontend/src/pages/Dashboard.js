@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import OutgoingInvoicesPage from '../pages/OutgoingInvoicesPage';
 import SalesPredictionPage from '../pages/SalesPredictionPage';
 import DataAnalysisPage from '../pages/DataAnalysisPage';
+import DataImportPage from '../pages/DataImportPage';
 
 const Dashboard = () => {
   const [username, setUsername] = useState('');
@@ -68,12 +69,22 @@ const Dashboard = () => {
                   Visualizza Statistiche
                 </button>
               </div>
+              <div style={styles.welcomeCard}>
+                <h4>📁 Carica Dati</h4>
+                <p>Importa i report giornalieri per alimentare il sistema</p>
+                <button 
+                  onClick={() => setView('import')}
+                  style={styles.secondaryButton}
+                >
+                  Carica Report
+                </button>
+              </div>
             </div>
           </div>
         );
       case 'invoices':
         return <OutgoingInvoicesPage />;
-      case 'predictions': // AGGIUNGI QUESTO CASE
+      case 'predictions':
         return <SalesPredictionPage />;
       case 'analysis':
         return <DataAnalysisPage />;
