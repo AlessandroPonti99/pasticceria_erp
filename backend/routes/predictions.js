@@ -815,4 +815,175 @@ function getDayNameFromNumber(dayNumber) {
   return days[(dayNumber - 1) % 7];
 }
 
+const cheerio = require('cheerio'); // Aggiungi questa dipendenza
+
+// Importazione dati da report HTML
+router.post('/import-daily-data', authenticateToken, async (req, res) => {
+  try {
+    const { htmlContent, date } = req.body;
+    
+    if (!htmlContent || !date) {
+      return res.status(400).json({ error: 'HTML content e date sono obbligatori' });
+    }
+
+    const parsedData = parseDailyReportHTML(htmlContent, date);
+    
+    // Salva nel database
+    const result = await saveDailyData(parsedData);
+    
+    res.json({
+      success: true,
+      message: `Dati del ${date} importati con successo`,
+      data: {
+        date: parsedData.date,
+        total_sales: parsedData.total_sales,
+        transaction_count: parsedData.transaction_count,
+        departments: parsedData.departments.length,
+        products: parsedData.products.length
+      },
+      database: result
+    });
+
+  } catch (error) {
+    console.error('Import error:', error);
+    res.status(500).json({ 
+      error: 'Errore nell\'importazione dati',
+      details: error.message 
+    });
+  }
+});
+
+// Parsing dell'HTML del report
+function parseDailyReportHTML(htmlContent, date) {
+  const $ = cheerio.load(htmlContent);
+  const result = {
+    date: date,
+    total_sales: 0,
+    transaction_count: 0,
+    payment_methods: {},
+    departments: [],
+    products: []
+  };
+
+  try {
+    // Estrai vendite totali
+    const salesText = $('div:contains("vendite")').next('p').first().text();
+    result.total_sales = parseFloat(salesText.replace('EUR', '').replace('.', '').replace(',', '.').trim());
+
+    // Estrai numero documenti (transazioni)
+    const docsText = $('div:contains("documenti")').next('p').first().text();
+    result.transaction_count = parseInt(docsText) || 0;
+
+    // Estrai metodi di pagamento
+    $('div:contains("vendite")').nextAll('p.header3').each((i, elem) => {
+      const text = $(elem).text();
+      if (text.includes('CONTANTI:')) {
+        result.payment_methods.cash = parseFloat(text.split(':')[1].replace('.', '').replace(',', '.').trim());
+      } else if (text.includes('BANCOMAT')) {
+        result.payment_methods.card = parseFloat(text.split(':')[1].replace('.', '').replace(',', '.').trim());
+      } else if (text.includes('satispay')) {
+        result.payment_methods.satispay = parseFloat(text.split(':')[1].replace('.', '').replace(',', '.').trim());
+      }
+    });
+
+    // Estrai dati per reparto
+    $('div:contains("venduto per reparto")').next('table').find('tr').each((i, elem) => {
+      const cols = $(elem).find('td');
+      if (cols.length >= 3) {
+        const quantity = parseInt($(cols[0]).text().trim());
+        const department = $(cols[1]).text().trim();
+        const sales = parseFloat($(cols[2]).text().replace('EUR', '').replace('.', '').replace(',', '.').trim());
+        
+        if (quantity && department && sales) {
+          result.departments.push({
+            quantity,
+            name: department,
+            sales
+          });
+        }
+      }
+    });
+
+    // Estrai dati prodotti dettagliati
+    $('div:contains("venduto articoli")').next('table').find('tr').each((i, elem) => {
+      const cols = $(elem).find('td');
+      if (cols.length >= 3) {
+        const quantity = parseInt($(cols[0]).text().trim());
+        const productName = $(cols[1]).text().trim();
+        const sales = parseFloat($(cols[2]).text().replace('EUR', '').replace('.', '').replace(',', '.').trim());
+        
+        if (quantity && productName && sales) {
+          result.products.push({
+            quantity,
+            name: productName,
+            sales,
+            unit_price: sales / quantity
+          });
+        }
+      }
+    });
+
+    return result;
+
+  } catch (error) {
+    throw new Error(`Errore nel parsing HTML: ${error.message}`);
+  }
+}
+
+// Salva dati nel database
+async function saveDailyData(parsedData) {
+  // Prepara dati prodotti per JSON
+  const productsObject = {};
+  parsedData.products.forEach(product => {
+    // Normalizza nome prodotto per chiave
+    const key = product.name.toLowerCase()
+      .replace(/[^a-z0-9]/g, '_')
+      .replace(/_+/g, '_')
+      .replace(/^_|_$/g, '');
+    productsObject[key] = product.quantity;
+  });
+
+  // Ottieni dati meteo (usa await correttamente)
+  const temperature = await getHistoricalWeather(parsedData.date);
+  const isHoliday = checkIfHoliday(new Date(parsedData.date));
+
+  return new Promise((resolve, reject) => {
+    const query = `
+      INSERT INTO sales_history 
+      (date, products, total_sales, transaction_count, payment_methods, departments, temperature, is_holiday) 
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+      ON DUPLICATE KEY UPDATE 
+        products = VALUES(products),
+        total_sales = VALUES(total_sales),
+        transaction_count = VALUES(transaction_count),
+        payment_methods = VALUES(payment_methods),
+        departments = VALUES(departments)
+    `;
+
+    db.query(query, [
+      parsedData.date,
+      serializeJSON(productsObject),
+      parsedData.total_sales,
+      parsedData.transaction_count,
+      serializeJSON(parsedData.payment_methods),
+      serializeJSON(parsedData.departments),
+      temperature,
+      isHoliday.is_holiday
+    ], (err, results) => {
+      if (err) reject(err);
+      else resolve(results);
+    });
+  });
+}
+
+// Meteo storico (mock - puoi integrare API storiche dopo)
+async function getHistoricalWeather(date) {
+  // Per ora ritorna temperatura basata sulla stagione
+  const month = new Date(date).getMonth() + 1;
+  if (month >= 6 && month <= 8) return 25 + Math.random() * 10; // Estate
+  if (month >= 3 && month <= 5) return 15 + Math.random() * 10; // Primavera
+  if (month >= 9 && month <= 11) return 10 + Math.random() * 10; // Autunno
+  return 5 + Math.random() * 10; // Inverno
+}
+
 module.exports = router;
